@@ -1,0 +1,18 @@
+{
+    "layers": {
+        "TopPlacement": true,
+        "TopSilk": true,
+        "TopPattern": true,
+        "BottomPattern": true,
+        "BottomSilk": true,
+        "BottomPlacement": true
+    },
+    "objects": {
+        "show_grid": true,
+        "snap_to_grid": true
+    },
+    "pcb_print": {
+        "resolution": 300,
+        "color_mode": "Color"
+    }
+}
