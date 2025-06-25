@@ -23,7 +23,6 @@ class Pad(QGraphicsItem):
             self.pad_data['corner_radius'] = 0
         if 'id' not in self.pad_data:
             self.pad_data['id'] = '1'
-
         # Ensure layers and thermal data exists
         if 'layers' not in self.pad_data:
             self.pad_data['layers'] = {
@@ -38,10 +37,11 @@ class Pad(QGraphicsItem):
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setAcceptHoverEvents(True)
-
+        
         self.resize_handles = []
         self.current_handle = None
         self.is_resizing = False
+        self.hover_handle = None  # Track which handle we're hovering over
 
         # Layer-specific colors
         self.layer_colors = {
@@ -78,10 +78,10 @@ class Pad(QGraphicsItem):
 
         # Add some padding for the ID text
         text_bounds = self.id_text.boundingRect()
-        pad_bounds = QRectF(-width / 2, -height / 2, width, height)
-
+        pad_bounds = QRectF(-width/2, -height/2, width, height)
+        
         # Return a rectangle that encompasses both the pad and the text
-        return pad_bounds.united(text_bounds)
+        return pad_bounds
 
     def get_handle_rects(self):
         """Return the rectangles for the resize handles"""
@@ -90,11 +90,12 @@ class Pad(QGraphicsItem):
         handle_size = 10
         half_handle = handle_size / 2
 
+        # Adjust handle positions to be more precise
         return {
-            'top_left': QRectF(-width / 2 - half_handle, -height / 2 - half_handle, handle_size, handle_size),
-            'top_right': QRectF(width / 2 - half_handle, -height / 2 - half_handle, handle_size, handle_size),
-            'bottom_left': QRectF(-width / 2 - half_handle, height / 2 - half_handle, handle_size, handle_size),
-            'bottom_right': QRectF(width / 2 - half_handle, height / 2 - half_handle, handle_size, handle_size)
+            'top_left': QRectF(-width/2 - handle_size, -height/2 - handle_size, handle_size, handle_size),
+            'top_right': QRectF(width/2, -height/2 - handle_size, handle_size, handle_size),
+            'bottom_left': QRectF(-width/2 - handle_size, height/2, handle_size, handle_size),
+            'bottom_right': QRectF(width/2, height/2, handle_size, handle_size)
         }
 
     def paint(self, painter, option, widget):
@@ -105,11 +106,11 @@ class Pad(QGraphicsItem):
             height = float(self.pad_data['height']) * 100
             hole_diameter = float(self.pad_data.get('hole_diameter', 0)) * 100
             corner_radius = float(self.pad_data.get('corner_radius', 0)) * 100
-
+            
             # Update ID text position
             text_bounds = self.id_text.boundingRect()
-            self.id_text.setPos(-text_bounds.width() / 2, -text_bounds.height() / 2)
-
+            self.id_text.setPos(-text_bounds.width()/2, -text_bounds.height()/2)
+            
             # Draw pad shape for each visible layer
             for layer_name, is_enabled in self.pad_data['layers'].items():
                 if is_enabled and self.layer_visibility[layer_name]:
@@ -120,44 +121,55 @@ class Pad(QGraphicsItem):
                     # Draw the pad shape
                     if self.pad_data['shape'] == 'Circle':
                         diameter = max(width, height)
-                        painter.drawEllipse(-diameter / 2, -diameter / 2, diameter, diameter)
+                        painter.drawEllipse(int(-diameter/2), int(-diameter/2), int(diameter), int(diameter))
                     elif self.pad_data['shape'] == 'Rectangle':
                         if corner_radius > 0:
-                            painter.drawRoundedRect(-width / 2, -height / 2, width, height,
-                                                    corner_radius, corner_radius)
+                            painter.drawRoundedRect(int(-width/2), int(-height/2), int(width), int(height), 
+                                                  int(corner_radius), int(corner_radius))
                         else:
-                            painter.drawRect(-width / 2, -height / 2, width, height)
+                            painter.drawRect(int(-width/2),int(-height/2), int(width), int(height))
                     elif self.pad_data['shape'] == 'Oval':
-                        painter.drawEllipse(-width / 2, -height / 2, width, height)
+                        painter.drawEllipse(int(-width/2), int(-height/2), int(width), int(height))
 
             # Draw hole for THT pads
             if "THT" in self.pad_data['type'] and hole_diameter > 0:
                 painter.setPen(QPen(Qt.black, 1))
                 painter.setBrush(QBrush(Qt.white))
-                painter.drawEllipse(-hole_diameter / 2, -hole_diameter / 2,
-                                    hole_diameter, hole_diameter)
+                painter.drawEllipse(int(-hole_diameter/2), int(-hole_diameter/2), 
+                                  int(hole_diameter), int(hole_diameter))
 
                 # Draw thermal relief if enabled
                 if self.pad_data['thermal']['enabled']:
                     spoke_width = self.pad_data['thermal']['spoke_width'] * 100
                     gap_width = self.pad_data['thermal']['gap_width'] * 100
-
+                    
                     # Draw thermal relief spokes
                     for angle in [0, 90, 180, 270]:
                         painter.save()
                         painter.rotate(angle)
-
+                        
                         # Draw spoke
                         painter.setPen(QPen(self.layer_colors['top_copper'], spoke_width))
-                        painter.drawLine(hole_diameter / 2, 0, gap_width / 2, 0)
-
+                        painter.drawLine(int(hole_diameter/2), 0, int(gap_width/2), 0)
+                        
                         painter.restore()
 
-            # Draw selection indicator
+            # Draw selection indicator and resize handles
             if self.isSelected():
+                # Draw selection rectangle
                 painter.setPen(QPen(Qt.red, 2, Qt.DashLine))
                 painter.setBrush(Qt.NoBrush)
                 painter.drawRect(self.boundingRect())
+                
+                # Draw resize handles
+                for handle_name, handle_rect in self.get_handle_rects().items():
+                    if handle_name == self.hover_handle:
+                        painter.setPen(QPen(Qt.red, 2))
+                        painter.setBrush(QBrush(Qt.red))
+                    else:
+                        painter.setPen(QPen(Qt.red, 1))
+                        painter.setBrush(QBrush(Qt.white))
+                    painter.drawRect(handle_rect)
 
         except Exception as e:
             self.show_error_message("Paint Error", f"An error occurred while painting the pad: {e}")
@@ -170,6 +182,7 @@ class Pad(QGraphicsItem):
                 if handle_rect.contains(pos):
                     self.current_handle = handle_name
                     self.is_resizing = True
+                    self.setSelected(True)  # Ensure the pad is selected when resizing
                     event.accept()
                     return
         super().mousePressEvent(event)
@@ -179,26 +192,46 @@ class Pad(QGraphicsItem):
             pos = event.pos()
             width = self.pad_data['width'] * 100
             height = self.pad_data['height'] * 100
-
+            
+            # Store original dimensions for aspect ratio calculation
+            original_width = width
+            original_height = height
+            aspect_ratio = width / height if height != 0 else 1
+            
             # Calculate the new dimensions based on the handle being dragged
             if self.current_handle == 'bottom_right':
-                new_width = (pos.x() + width / 2) * 2
-                new_height = (pos.y() + height / 2) * 2
+                new_width = max(0.5 * 100, pos.x() * 2)
+                new_height = max(0.5 * 100, pos.y() * 2)
             elif self.current_handle == 'bottom_left':
-                new_width = (-pos.x() + width / 2) * 2
-                new_height = (pos.y() + height / 2) * 2
+                new_width = max(0.5 * 100, -pos.x() * 2)
+                new_height = max(0.5 * 100, pos.y() * 2)
             elif self.current_handle == 'top_right':
-                new_width = (pos.x() + width / 2) * 2
-                new_height = (-pos.y() + height / 2) * 2
+                new_width = max(0.5 * 100, pos.x() * 2)
+                new_height = max(0.5 * 100, -pos.y() * 2)
             elif self.current_handle == 'top_left':
-                new_width = (-pos.x() + width / 2) * 2
-                new_height = (-pos.y() + height / 2) * 2
+                new_width = max(0.5 * 100, -pos.x() * 2)
+                new_height = max(0.5 * 100, -pos.y() * 2)
 
-            # Update pad dimensions (with minimum size constraint)
-            self.pad_data['width'] = max(0.5, new_width / 100)
-            self.pad_data['height'] = max(0.5, new_height / 100)
+            # Maintain aspect ratio if shift is pressed
+            if event.modifiers() & Qt.ShiftModifier:
+                if abs(new_width - original_width) > abs(new_height - original_height):
+                    new_height = new_width / aspect_ratio
+                else:
+                    new_width = new_height * aspect_ratio
 
-            # Update the scene
+            # Update pad dimensions (convert back from scene units to mm)
+            self.pad_data['width'] = new_width / 100
+            self.pad_data['height'] = new_height / 100
+            
+            # If this is a THT pad, update the hole diameter proportionally
+            if "THT" in self.pad_data.get('type', ''):
+                min_dim = min(new_width, new_height) / 100
+                self.pad_data['hole_diameter'] = min(min_dim * 0.8, max(0.2, self.pad_data['hole_diameter']))
+            
+            # Update tooltip with current dimensions
+            self.setToolTip(f"Size: {self.pad_data['width']:.2f} x {self.pad_data['height']:.2f} mm")
+            
+            # Notify scene about geometry change and update
             self.prepareGeometryChange()
             self.update()
             event.accept()
@@ -237,7 +270,7 @@ class Pad(QGraphicsItem):
         self.id_text.setDefaultTextColor(Qt.black)
         # Center the text
         text_bounds = self.id_text.boundingRect()
-        self.id_text.setPos(-text_bounds.width() / 2, -text_bounds.height() / 2)
+        self.id_text.setPos(-text_bounds.width()/2, -text_bounds.height()/2)
 
     def update_pad_data(self, new_data):
         """Update pad data and refresh the display"""
@@ -250,3 +283,41 @@ class Pad(QGraphicsItem):
         if layer_name in self.layer_colors:
             self.layer_colors[layer_name] = color
             self.update()  # Trigger a repaint
+
+    def hoverMoveEvent(self, event):
+        """Handle hover move events to show resize cursor when over handles"""
+        if not self.isSelected():
+            event.ignore()
+            return
+            
+        pos = event.pos()
+        old_hover = self.hover_handle
+        self.hover_handle = None
+        
+        # Check if hovering over any resize handle
+        for handle_name, handle_rect in self.get_handle_rects().items():
+            if handle_rect.contains(pos):
+                self.hover_handle = handle_name
+                break
+                
+        # Update cursor based on which handle we're hovering over
+        if self.hover_handle:
+            if self.hover_handle in ('top_left', 'bottom_right'):
+                self.setCursor(Qt.SizeFDiagCursor)
+            else:  # top_right or bottom_left
+                self.setCursor(Qt.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.ArrowCursor)
+            
+        # Force a repaint if the hover state changed
+        if old_hover != self.hover_handle:
+            self.update()
+            
+        event.accept()
+
+    def hoverLeaveEvent(self, event):
+        """Reset cursor when leaving the item"""
+        self.hover_handle = None
+        self.setCursor(Qt.ArrowCursor)
+        self.update()
+        event.accept()

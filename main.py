@@ -2,7 +2,8 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from main_app import main_app
 import traceback
-
+import faulthandler
+faulthandler.enable()
 def main():
     try:
         app = QApplication(sys.argv)  # Tạo ứng dụng PyQt

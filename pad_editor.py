@@ -14,11 +14,9 @@ from PyQt5.QtCore import Qt, QRectF
 try:
     from pad import Pad  # nếu bạn có một module riêng cho Pad
 except ImportError:
-    class Pad:
-        pass  # placeholder nếu không có class Pad
+    class Pad: pass  # placeholder nếu không có class Pad
 
-
-class PadEditor(QDialog):
+class PadEditor(QDialog): 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Pad Editor")
@@ -172,7 +170,7 @@ class PadEditor(QDialog):
         self.hole_diameter_edit.textChanged.connect(self.update_pad_preview)
         self.corner_radius_edit.textChanged.connect(self.update_pad_preview)
         self.pad_id_edit.textChanged.connect(self.update_pad_preview)
-
+        
         # Connect thermal relief controls
         self.thermal_enabled.toggled.connect(self.update_pad_preview)
         self.thermal_spoke_width.textChanged.connect(self.update_pad_preview)
@@ -192,7 +190,7 @@ class PadEditor(QDialog):
             height = float(self.height_edit.text()) * scale
             hole_diameter = float(self.hole_diameter_edit.text()) * scale
             corner_radius = float(self.corner_radius_edit.text()) * scale
-
+            
             # Get pad ID
             pad_id = self.pad_id_edit.text()
 
@@ -228,29 +226,29 @@ class PadEditor(QDialog):
         }
 
         # Draw layers from bottom to top (match the order in actual pad)
-        layer_order = ['bottom_paste', 'bottom_copper', 'bottom_mask',
-                       'top_mask', 'top_copper', 'top_paste']
+        layer_order = ['bottom_paste', 'bottom_copper', 'bottom_mask', 
+                      'top_mask', 'top_copper', 'top_paste']
 
         for layer_name in layer_order:
             if layer_checks[layer_name].isChecked():
                 color = layer_colors[layer_name]
-
+                
                 # Create pad shape based on selected type
                 if pad_shape == "Circle":
-                    diameter = max(width, height)
-                    pad_item = QGraphicsEllipseItem(-diameter / 2, -diameter / 2, diameter, diameter)
+                    diameter = width
+                    pad_item = QGraphicsEllipseItem(-diameter/2, -diameter/2, diameter, diameter)
                 elif pad_shape == "Rectangle":
                     if corner_radius > 0:
                         path = QPainterPath()
-                        path.addRoundedRect(-width / 2, -height / 2, width, height,
-                                            corner_radius, corner_radius)
+                        path.addRoundedRect(-width/2, -height/2, width, height, 
+                                          corner_radius, corner_radius)
                         pad_item = QGraphicsPathItem(path)
                     else:
-                        pad_item = QGraphicsRectItem(-width / 2, -height / 2, width, height)
+                        pad_item = QGraphicsRectItem(-width/2, -height/2, width, height)
                 elif pad_shape == "Oval":
-                    pad_item = QGraphicsEllipseItem(-width / 2, -height / 2, width, height)
+                    pad_item = QGraphicsEllipseItem(-width/2, -height/2, width, height)
                 else:  # Custom - use rectangle for now
-                    pad_item = QGraphicsRectItem(-width / 2, -height / 2, width, height)
+                    pad_item = QGraphicsRectItem(-width/2, -height/2, width, height)
 
                 # Set appearance for this layer
                 pad_item.setPen(QPen(color, 2))
@@ -260,8 +258,8 @@ class PadEditor(QDialog):
         # Draw hole for THT pads
         if "THT" in pad_type and hole_diameter > 0:
             # Draw hole
-            hole_item = QGraphicsEllipseItem(-hole_diameter / 2, -hole_diameter / 2,
-                                             hole_diameter, hole_diameter)
+            hole_item = QGraphicsEllipseItem(-hole_diameter/2, -hole_diameter/2, 
+                                           hole_diameter, hole_diameter)
             hole_item.setPen(QPen(Qt.black, 1))
             hole_item.setBrush(QBrush(Qt.white))
             self.pad_preview_scene.addItem(hole_item)
@@ -271,12 +269,12 @@ class PadEditor(QDialog):
                 try:
                     spoke_width = float(self.thermal_spoke_width.text()) * scale
                     gap_width = float(self.thermal_gap_width.text()) * scale
-
+                    
                     # Draw thermal relief spokes (match the actual pad rendering)
                     for angle in [0, 90, 180, 270]:
                         spoke = QGraphicsLineItem()
                         # Draw spoke from hole edge to gap width, not to pad edge
-                        spoke.setLine(hole_diameter / 2, 0, gap_width / 2, 0)
+                        spoke.setLine(hole_diameter/2, 0, gap_width/2, 0)
                         spoke.setPen(QPen(layer_colors['top_copper'], spoke_width))
                         spoke.setRotation(angle)
                         self.pad_preview_scene.addItem(spoke)
@@ -289,13 +287,13 @@ class PadEditor(QDialog):
             text_item.setDefaultTextColor(Qt.black)
             # Center the text on the pad
             text_bounds = text_item.boundingRect()
-            text_item.setPos(-text_bounds.width() / 2, -text_bounds.height() / 2)
+            text_item.setPos(-text_bounds.width()/2, -text_bounds.height()/2)
             self.pad_preview_scene.addItem(text_item)
 
         # Center the view on the pad and scale appropriately
         margin = max(width, height) * 0.2  # Add 20% margin
-        self.pad_preview_view.setSceneRect(QRectF(-width / 2 - margin, -height / 2 - margin,
-                                                  width + 2 * margin, height + 2 * margin))
+        self.pad_preview_view.setSceneRect(QRectF(-width/2 - margin, -height/2 - margin, 
+                                                 width + 2*margin, height + 2*margin))
         self.pad_preview_view.centerOn(0, 0)
         self.pad_preview_view.setRenderHint(QPainter.Antialiasing)
 
@@ -398,11 +396,11 @@ class PadEditor(QDialog):
         """Handle width changes for circle shape"""
         if self.pad_shape_combo.currentText() == "Circle":
             self.height_edit.setText(new_width)
-
+            
     def on_shape_changed(self):
         """Handle shape selection changes"""
         current_shape = self.pad_shape_combo.currentText()
-
+        
         # Update labels and enable/disable fields based on shape
         if current_shape == "Circle":
             self.width_label.setText("Diameter:")
@@ -431,5 +429,6 @@ class PadEditor(QDialog):
             self.corner_radius_label.setText("Corner Radius:")
             self.height_edit.setEnabled(True)
             self.corner_radius_edit.setEnabled(True)
-
+        
         self.update_pad_preview()
+
