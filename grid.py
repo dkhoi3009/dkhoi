@@ -1,5 +1,8 @@
-from PyQt5.QtWidgets import QGraphicsLineItem, QGraphicsItem
+from PyQt5.QtWidgets import QGraphicsLineItem, QGraphicsItem, QGraphicsTextItem
 from PyQt5.QtGui import QPen
+
+class GridText(QGraphicsTextItem):
+    pass
 
 class GridLine(QGraphicsLineItem):
     def __init__(self, x1, y1, x2, y2, pen):

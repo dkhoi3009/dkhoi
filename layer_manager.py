@@ -1,8 +1,7 @@
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtGui import QPen, QColor, QIcon, QPixmap, QPainter, QBrush
-from PyQt5.QtWidgets import (QGraphicsScene, QGraphicsItem, QListWidget,
-                             QTreeWidgetItem, QMenu, QFrame, QListWidgetItem)
-
+from PyQt5.QtWidgets import (QGraphicsScene, QGraphicsItem, QListWidget, 
+                           QTreeWidgetItem, QMenu, QFrame, QListWidgetItem)
 
 class LayerManager(QObject):
     # Add signal for layer double click
@@ -27,15 +26,15 @@ class LayerManager(QObject):
             'top_paste': 'Paste/top_paste',
             'bottom_paste': 'Paste/bottom_paste'
         }
-
+        
         # Create the lock icon
         self.lock_icon = self._create_lock_icon()
-
+        
         # Set up tree widget columns
         self.layers_widget.setHeaderLabels(["Layer", "Color"])
         self.layers_widget.setColumnWidth(0, 200)
         self.layers_widget.setColumnWidth(1, 60)
-
+        
         # Connect signals
         self.layers_widget.itemDoubleClicked.connect(self._on_item_double_clicked)
         self.layers_widget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -46,17 +45,17 @@ class LayerManager(QObject):
         pixmap = QPixmap(16, 16)
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
-
+        
         # Draw a simple lock shape
         painter.setPen(QPen(Qt.black, 1))
         painter.setBrush(QBrush(Qt.black))
-
+        
         # Draw lock body (rectangle)
         painter.drawRect(4, 8, 8, 6)
-
+        
         # Draw lock shackle (arc)
         painter.drawArc(4, 4, 8, 8, 0, 180 * 16)
-
+        
         painter.end()
         return QIcon(pixmap)
 
@@ -75,11 +74,11 @@ class LayerManager(QObject):
             if layer_name in self.layers:
                 menu = QMenu()
                 is_locked = self.layers[layer_name].get("locked", False)
-
+                
                 # Create lock/unlock action
                 lock_action = menu.addAction("Unlock" if is_locked else "Lock")
                 lock_action.triggered.connect(lambda: self.set_layer_locked(layer_name, not is_locked))
-
+                
                 # Show menu at cursor position
                 menu.exec_(self.layers_widget.viewport().mapToGlobal(position))
 
@@ -125,10 +124,10 @@ class LayerManager(QObject):
             layer_item = QTreeWidgetItem(group_item, [layer_name, ""])  # Empty text for color column
         else:
             layer_item = QTreeWidgetItem(self.layers_widget, [layer_name, ""])  # Empty text for color column
-
+        
         layer_item.setFlags(layer_item.flags() | Qt.ItemIsUserCheckable)
         layer_item.setCheckState(0, Qt.Checked)  # Set visibility in layer name column
-
+        
         # Create color preview frame
         if color:
             color_preview = QFrame()
@@ -136,7 +135,7 @@ class LayerManager(QObject):
             color_preview.setFrameShape(QFrame.Box)
             color_preview.setStyleSheet(f"background-color: {color.name()}; border: 1px solid black;")
             self.layers_widget.setItemWidget(layer_item, 1, color_preview)
-
+            
         # Expand the group
         if group_item:
             group_item.setExpanded(True)
@@ -181,7 +180,7 @@ class LayerManager(QObject):
             return
 
         self.layers[layer_name]["visible"] = False
-
+        
         # Update visibility of items in this layer
         for item in self.layers[layer_name]["items"]:
             if isinstance(item, QGraphicsItem):
@@ -206,7 +205,7 @@ class LayerManager(QObject):
             raise ValueError(f"Layer '{layer_name}' does not exist.")
 
         self.layers[layer_name]["visible"] = True
-
+        
         # Update visibility of items in this layer
         for item in self.layers[layer_name]["items"]:
             if isinstance(item, QGraphicsItem):
@@ -233,10 +232,10 @@ class LayerManager(QObject):
 
         # Add item to layer's management list
         self.layers[layer_name]["items"].append(item)
-
+        
         # Set Z-index based on layer
         item.setZValue(self.layers[layer_name]["z_index"])
-
+        
         # Handle visibility
         if hasattr(item, 'pad_data') and hasattr(item, 'set_layer_visibility'):
             # For pads, set visibility for specific layers
@@ -247,7 +246,9 @@ class LayerManager(QObject):
         else:
             # For non-pad items, set overall visibility
             item.setVisible(self.layers[layer_name]["visible"])
-            self.scene.addItem(item)  # Only add non-pad items here
+            # # Only add to scene if it's not already there
+            # if item.scene() != self.scene:
+            #     self.scene.addItem(item)
 
     def clear_layer(self, layer_name: str):
         """
@@ -286,12 +287,12 @@ class LayerManager(QObject):
                     pen = item.pen()
                     pen.setColor(color)
                     item.setPen(pen)
-
+                    
                     if hasattr(item, 'brush'):
                         brush = item.brush()
                         brush.setColor(color)
                         item.setBrush(brush)
-
+                
                 # Force a visual update
                 item.update()
 
@@ -325,7 +326,7 @@ class LayerManager(QObject):
             raise ValueError(f"Layer '{layer_name}' does not exist.")
 
         self.layers[layer_name]["locked"] = locked
-
+        
         # If locking the layer, ensure it's visible
         if locked:
             self.show_layer(layer_name)
